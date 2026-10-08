@@ -72,6 +72,35 @@ class Xtream(server: String, private val user: String, private val pass: String)
         return out
     }
 
+    /** Últimos filmes e séries adicionados (mistura os mais recentes dos dois catálogos). */
+    fun latest(limit: Int): List<Featured> {
+        val out = ArrayList<Featured>()
+        val movies = array(api("get_vod_streams"))
+        val mv = ArrayList<Featured>()
+        for (i in 0 until movies.length()) {
+            val o = movies.optJSONObject(i) ?: continue
+            val ts = o.optString("added", "0").toLongOrNull() ?: 0L
+            mv.add(Featured(Entry(o.str("stream_id"), o.str("name"), o.str("stream_icon"), o.str("container_extension")), false, ts))
+        }
+        mv.sortByDescending { it.ts }
+        out.addAll(mv.take(limit))
+        try {
+            val shows = array(api("get_series"))
+            val sv = ArrayList<Featured>()
+            for (i in 0 until shows.length()) {
+                val o = shows.optJSONObject(i) ?: continue
+                val ts = o.optString("last_modified", "0").toLongOrNull() ?: 0L
+                sv.add(Featured(Entry(o.str("series_id"), o.str("name"), o.str("cover"), ""), true, ts))
+            }
+            sv.sortByDescending { it.ts }
+            out.addAll(sv.take(limit))
+        } catch (e: Exception) {
+            // sem séries: mostra só os filmes
+        }
+        out.sortByDescending { it.ts }
+        return out.filter { it.entry.title.isNotBlank() }.take(limit)
+    }
+
     fun episodes(seriesId: String): List<Episode> {
         val text = fetch(api("get_series_info", "&series_id=" + enc(seriesId))).trim()
         val out = ArrayList<Episode>()

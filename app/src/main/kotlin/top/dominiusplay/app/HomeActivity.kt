@@ -96,6 +96,7 @@ class HomeActivity : AppCompatActivity() {
             if (n.placement == "home") content.addView(NoticeUi.banner(this, n), Ui.vlp(this, 16, 0))
         }
         content.addView(cards(), Ui.vlp(this, 20, 0))
+        content.addView(FeaturedRail.build(this, s), Ui.vlp(this, 20, 0))
         maybeShowPopup(s)
         maybeShowUpdate(s)
     }

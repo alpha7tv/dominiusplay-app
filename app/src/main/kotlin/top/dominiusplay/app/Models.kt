@@ -137,6 +137,9 @@ object Session {
 /** Item de lista (canal, filme ou série). */
 data class Entry(val id: String, val title: String, val image: String, val ext: String)
 
+/** Destaque da tela inicial: filme ou série recém-adicionado. */
+data class Featured(val entry: Entry, val series: Boolean, val ts: Long)
+
 data class Category(val id: String, val name: String)
 
 data class Episode(val id: String, val title: String, val season: Int, val number: Int, val ext: String)
