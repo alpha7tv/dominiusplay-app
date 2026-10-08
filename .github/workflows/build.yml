@@ -43,13 +43,13 @@ jobs:
             echo "KEY_PASSWORD=$KS_KEYPASS" >> "$GITHUB_ENV"
             echo "Assinando com a chave oficial (secrets)."
           else
-            keytool -genkeypair -keystore "$RUNNER_TEMP/release.jks" -storepass dominius123 -keypass dominius123 \
-              -alias dominius -keyalg RSA -keysize 2048 -validity 10000 -dname "CN=Dominius Play"
-            echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
-            echo "KEYSTORE_PASSWORD=dominius123" >> "$GITHUB_ENV"
-            echo "KEY_ALIAS=dominius" >> "$GITHUB_ENV"
-            echo "KEY_PASSWORD=dominius123" >> "$GITHUB_ENV"
-            echo "::warning::Sem chave oficial: assinatura provisória. Para atualizar o app por cima, configure os secrets KEYSTORE_*."
+            echo "::error::Chave oficial não encontrada nos secrets do repositório. Faltando (vazio = não cadastrado):"
+            [ -z "$KS_B64" ] && echo "  - KEYSTORE_BASE64"
+            [ -z "$KS_PASS" ] && echo "  - KEYSTORE_PASSWORD"
+            [ -z "$KS_ALIAS" ] && echo "  - KEY_ALIAS"
+            [ -z "$KS_KEYPASS" ] && echo "  - KEY_PASSWORD"
+            echo "Cadastre em Settings > Secrets and variables > Actions > Repository secrets (aba Secrets, não Variables)."
+            exit 1
           fi
 
       - name: Compilar
