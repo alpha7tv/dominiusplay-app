@@ -52,6 +52,16 @@ object PanelApi {
         return post("/api/app/ativar", b)
     }
 
+    fun login(username: String, password: String): Result {
+        val b = JSONObject()
+        b.put("username", username)
+        b.put("password", password)
+        b.put("device_key", Prefs.deviceKey)
+        b.put("model", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL)
+        b.put("app_version", BuildConfig.VERSION_NAME)
+        return post("/api/app/entrar", b)
+    }
+
     fun refresh(): Result {
         val b = JSONObject()
         b.put("token", Prefs.token)

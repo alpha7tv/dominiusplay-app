@@ -20,6 +20,14 @@ import kotlinx.coroutines.withContext
 
 class ActivationActivity : AppCompatActivity() {
     private lateinit var input: EditText
+    private lateinit var userInput: EditText
+    private lateinit var passInput: EditText
+    private lateinit var loginBox: LinearLayout
+    private lateinit var codeBox: LinearLayout
+    private lateinit var sub: TextView
+    private lateinit var title: TextView
+    private lateinit var toggle: TextView
+    private var codeMode = false
     private lateinit var message: TextView
     private lateinit var button: TextView
     private lateinit var noticesBox: LinearLayout
@@ -38,11 +46,47 @@ class ActivationActivity : AppCompatActivity() {
         col.setPadding(pad, Ui.dp(this, 40), pad, pad)
 
         col.addView(Ui.logo(this, 34f))
-        col.addView(Ui.text(this, "Ative o seu acesso", 22f, Ui.TEXT, true), Ui.vlp(this, 28, 6))
-        val sub = Ui.text(this, "Digite o código de 8 números que você recebeu no e-mail do teste ou pelo WhatsApp.", 14f, Ui.MUTED)
+        title = Ui.text(this, "Entre com o seu acesso", 22f, Ui.TEXT, true)
+        col.addView(title, Ui.vlp(this, 28, 6))
+        sub = Ui.text(this, "Digite o usuário e a senha que você recebeu no e-mail do teste ou pelo WhatsApp.", 14f, Ui.MUTED)
         sub.gravity = Gravity.CENTER
         col.addView(sub, Ui.vlp(this, 0, 18))
+        val boxWidth = if (Ui.isNarrow(this)) Ui.MATCH else Ui.dp(this, 420)
 
+        fun field(hint: String, password: Boolean): EditText {
+            val e = EditText(this)
+            e.inputType = if (password) InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_PASSWORD
+            else InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+            e.hint = hint
+            e.setHintTextColor(Ui.MUTED)
+            e.setTextColor(Ui.TEXT)
+            e.textSize = 18f
+            e.setSingleLine(true)
+            e.background = Ui.shape(this, Ui.CARD, 14, Ui.BORDER, 2)
+            e.setPadding(Ui.dp(this, 16), Ui.dp(this, 14), Ui.dp(this, 16), Ui.dp(this, 14))
+            return e
+        }
+        loginBox = LinearLayout(this)
+        loginBox.orientation = LinearLayout.VERTICAL
+        userInput = field("Usuário", false)
+        userInput.imeOptions = EditorInfo.IME_ACTION_NEXT
+        passInput = field("Senha", true)
+        passInput.imeOptions = EditorInfo.IME_ACTION_DONE
+        passInput.setOnEditorActionListener { _, actionId, _ ->
+            if (actionId == EditorInfo.IME_ACTION_DONE) {
+                submit()
+                true
+            } else {
+                false
+            }
+        }
+        loginBox.addView(userInput, Ui.vlp(this, 0, 0, Ui.MATCH, Ui.WRAP))
+        loginBox.addView(passInput, Ui.vlp(this, 12, 0, Ui.MATCH, Ui.WRAP))
+        col.addView(loginBox, Ui.vlp(this, 0, 0, boxWidth, Ui.WRAP))
+
+        codeBox = LinearLayout(this)
+        codeBox.orientation = LinearLayout.VERTICAL
+        codeBox.visibility = android.view.View.GONE
         input = EditText(this)
         input.inputType = InputType.TYPE_CLASS_NUMBER
         input.filters = arrayOf<InputFilter>(InputFilter.LengthFilter(8))
@@ -58,21 +102,24 @@ class ActivationActivity : AppCompatActivity() {
         input.setPadding(Ui.dp(this, 16), Ui.dp(this, 14), Ui.dp(this, 16), Ui.dp(this, 14))
         input.setOnEditorActionListener { _, actionId, _ ->
             if (actionId == EditorInfo.IME_ACTION_DONE) {
-                activate()
+                submit()
                 true
             } else {
                 false
             }
         }
-        val boxWidth = if (Ui.isNarrow(this)) Ui.MATCH else Ui.dp(this, 420)
-        col.addView(input, Ui.vlp(this, 0, 0, boxWidth, Ui.WRAP))
+        codeBox.addView(input, Ui.vlp(this, 0, 0, Ui.MATCH, Ui.WRAP))
+        col.addView(codeBox, Ui.vlp(this, 0, 0, boxWidth, Ui.WRAP))
 
         message = Ui.text(this, "", 14f, Ui.MUTED)
         message.gravity = Gravity.CENTER
         col.addView(message, Ui.vlp(this, 12, 0, boxWidth, Ui.WRAP))
 
-        button = Ui.primaryButton(this, "Ativar") { activate() }
+        button = Ui.primaryButton(this, "Entrar") { submit() }
         col.addView(button, Ui.vlp(this, 16, 0, boxWidth, Ui.WRAP))
+
+        toggle = Ui.ghostButton(this, "Tenho um código de ativação") { setMode(!codeMode) }
+        col.addView(toggle, Ui.vlp(this, 12, 0, boxWidth, Ui.WRAP))
 
         val help = Ui.ghostButton(this, "Preciso de ajuda (WhatsApp)") {
             NoticeUi.whatsapp(this, "Olá! Preciso de ajuda para ativar o aplicativo Dominius Play.")
@@ -88,7 +135,7 @@ class ActivationActivity : AppCompatActivity() {
 
         val msg = intent.getStringExtra("msg")
         if (!msg.isNullOrEmpty()) setMessage(msg, true)
-        input.requestFocus()
+        userInput.requestFocus()
         loadInfo()
     }
 
@@ -123,6 +170,57 @@ class ActivationActivity : AppCompatActivity() {
         }
     }
 
+    private fun setMode(code: Boolean) {
+        codeMode = code
+        loginBox.visibility = if (code) android.view.View.GONE else android.view.View.VISIBLE
+        codeBox.visibility = if (code) android.view.View.VISIBLE else android.view.View.GONE
+        title.text = if (code) "Ative o seu acesso" else "Entre com o seu acesso"
+        sub.text = if (code) "Digite o código de 8 números que você recebeu no e-mail do teste ou pelo WhatsApp."
+        else "Digite o usuário e a senha que você recebeu no e-mail do teste ou pelo WhatsApp."
+        button.text = if (code) "Ativar" else "Entrar"
+        toggle.text = if (code) "Entrar com usuário e senha" else "Tenho um código de ativação"
+        setMessage("", false)
+        (if (code) input else userInput).requestFocus()
+    }
+
+    private fun submit() {
+        if (codeMode) activate() else login()
+    }
+
+    private fun login() {
+        if (busy) return
+        val user = userInput.text.toString().trim()
+        val pass = passInput.text.toString()
+        if (user.isEmpty() || pass.isEmpty()) {
+            setMessage("Digite o usuário e a senha.", true)
+            return
+        }
+        busy = true
+        button.alpha = 0.5f
+        setMessage("Verificando…", false)
+        lifecycleScope.launch {
+            val res = withContext(Dispatchers.IO) { PanelApi.login(user, pass) }
+            finishAuth(res)
+        }
+    }
+
+    private fun finishAuth(res: PanelApi.Result) {
+        busy = false
+        button.alpha = 1f
+        val json = res.json
+        if (res.networkError) {
+            setMessage("Sem conexão com a internet. Verifique a rede e tente de novo.", true)
+        } else if (json != null && json.optBoolean("ok")) {
+            Prefs.token = json.optString("token")
+            Session.save(json)
+            startActivity(Intent(this, HomeActivity::class.java))
+            finish()
+        } else {
+            val m = json?.optString("message").orEmpty()
+            setMessage(if (m.isEmpty()) "Não foi possível entrar. Tente novamente." else m, true)
+        }
+    }
+
     private fun activate() {
         if (busy) return
         val code = input.text.toString().filter { it.isDigit() }
@@ -135,20 +233,7 @@ class ActivationActivity : AppCompatActivity() {
         setMessage("Verificando…", false)
         lifecycleScope.launch {
             val res = withContext(Dispatchers.IO) { PanelApi.activate(code) }
-            busy = false
-            button.alpha = 1f
-            val json = res.json
-            if (res.networkError) {
-                setMessage("Sem conexão com a internet. Verifique a rede e tente de novo.", true)
-            } else if (json != null && json.optBoolean("ok")) {
-                Prefs.token = json.optString("token")
-                Session.save(json)
-                startActivity(Intent(this@ActivationActivity, HomeActivity::class.java))
-                finish()
-            } else {
-                val m = json?.optString("message").orEmpty()
-                setMessage(if (m.isEmpty()) "Não foi possível ativar. Tente novamente." else m, true)
-            }
+            finishAuth(res)
         }
     }
 }
