@@ -88,8 +88,11 @@ class HomeActivity : AppCompatActivity() {
         val s = Session.current ?: return
         content.removeAllViews()
         content.addView(header(s))
+        val upd = s.update
+        if (Updater.available(upd)) content.addView(Updater.banner(this, upd!!), Ui.vlp(this, 16, 0))
         if (s.expired) {
             content.addView(expiredView(s), Ui.vlp(this, 24, 0))
+            maybeShowUpdate(s)
             return
         }
         for (n in s.notices) {
@@ -168,16 +171,12 @@ class HomeActivity : AppCompatActivity() {
         val m = Ui.text(this, s.expiredMessage, 15f, Ui.MUTED)
         m.gravity = Gravity.CENTER
         card.addView(m, Ui.vlp(this, 8, 16))
-        val wa = Ui.whatsappButton(this, "Renovar pelo WhatsApp") {
-            NoticeUi.whatsapp(this, "Olá! Meu acesso ao Dominius Play venceu e quero renovar.")
-        }
-        card.addView(wa, Ui.vlp(this, 0, 0, Ui.WRAP, Ui.WRAP))
-        val other = Ui.ghostButton(this, "Digitar outro código") {
+        val other = Ui.ghostButton(this, "Entrar com outra conta") {
             Session.clear()
             goActivation(null)
         }
-        card.addView(other, Ui.vlp(this, 12, 0, Ui.WRAP, Ui.WRAP))
-        wa.requestFocus()
+        card.addView(other, Ui.vlp(this, 4, 0, Ui.WRAP, Ui.WRAP))
+        other.requestFocus()
         return card
     }
 
@@ -190,21 +189,9 @@ class HomeActivity : AppCompatActivity() {
 
     private fun maybeShowUpdate(s: SessionData) {
         val u = s.update ?: return
-        if (u.versionCode <= BuildConfig.VERSION_CODE) return
-        if (shownUpdate) return
+        if (!Updater.available(u) || shownUpdate) return
         shownUpdate = true
-        val notes = if (u.notes.isEmpty()) "" else "\n\n" + u.notes
-        val b = AlertDialog.Builder(this)
-            .setTitle("Nova versão disponível (" + u.versionName + ")")
-            .setMessage(
-                (if (u.mandatory) "Esta atualização é obrigatória para continuar usando o app." else "Baixe a nova versão para ter as últimas melhorias.") + notes
-            )
-            .setPositiveButton("Baixar agora") { _, _ ->
-                NoticeUi.open(this, u.url)
-                if (u.mandatory) shownUpdate = false
-            }
-        if (u.mandatory) b.setCancelable(false) else b.setNegativeButton("Depois", null)
-        b.show()
+        Updater.dialog(this, u)
     }
 
     private fun showSettings() {
@@ -214,9 +201,6 @@ class HomeActivity : AppCompatActivity() {
             .setTitle("Configurações")
             .setMessage(info)
             .setPositiveButton("Fechar", null)
-            .setNeutralButton("Suporte") { _, _ ->
-                NoticeUi.whatsapp(this, "Olá! Preciso de ajuda com o aplicativo Dominius Play.")
-            }
             .setNegativeButton("Sair deste aparelho") { _, _ ->
                 Session.clear()
                 goActivation(null)

@@ -127,7 +127,7 @@ object Session {
             appName = cfg.str("app_name").ifEmpty { "Dominius Play" },
             supportWhatsapp = cfg.str("support_whatsapp"),
             expiredTitle = cfg.str("expired_title").ifEmpty { "Seu acesso venceu" },
-            expiredMessage = cfg.str("expired_message").ifEmpty { "Fale com a gente pelo WhatsApp para renovar." },
+            expiredMessage = cfg.str("expired_message").ifEmpty { "Renove o seu acesso com o seu fornecedor para voltar a assistir." },
             notices = notices,
             update = update
         )

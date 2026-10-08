@@ -48,7 +48,7 @@ class ActivationActivity : AppCompatActivity() {
         col.addView(Ui.logo(this, 34f))
         titleView = Ui.text(this, "Entre com o seu acesso", 22f, Ui.TEXT, true)
         col.addView(titleView, Ui.vlp(this, 28, 6))
-        sub = Ui.text(this, "Digite o usuário e a senha que você recebeu no e-mail do teste ou pelo WhatsApp.", 14f, Ui.MUTED)
+        sub = Ui.text(this, "Digite o usuário e a senha que você recebeu no e-mail do teste ou com o seu fornecedor.", 14f, Ui.MUTED)
         sub.gravity = Gravity.CENTER
         col.addView(sub, Ui.vlp(this, 0, 18))
         val boxWidth = if (Ui.isNarrow(this)) Ui.MATCH else Ui.dp(this, 420)
@@ -121,11 +121,6 @@ class ActivationActivity : AppCompatActivity() {
         toggle = Ui.ghostButton(this, "Tenho um código de ativação") { setMode(!codeMode) }
         col.addView(toggle, Ui.vlp(this, 12, 0, boxWidth, Ui.WRAP))
 
-        val help = Ui.ghostButton(this, "Preciso de ajuda (WhatsApp)") {
-            NoticeUi.whatsapp(this, "Olá! Preciso de ajuda para ativar o aplicativo Dominius Play.")
-        }
-        col.addView(help, Ui.vlp(this, 12, 0, boxWidth, Ui.WRAP))
-
         noticesBox = LinearLayout(this)
         noticesBox.orientation = LinearLayout.VERTICAL
         col.addView(noticesBox, Ui.vlp(this, 24, 0, boxWidth, Ui.WRAP))
@@ -150,9 +145,10 @@ class ActivationActivity : AppCompatActivity() {
             val res = withContext(Dispatchers.IO) { PanelApi.info() }
             val json = res.json ?: return@launch
             if (!json.optBoolean("ok")) return@launch
-            val cfg = json.optJSONObject("config")
-            val support = cfg?.optString("support_whatsapp").orEmpty()
-            if (support.isNotEmpty()) Prefs.supportWhatsapp = support
+            val upd = Updater.parse(json.optJSONObject("update"))
+            if (Updater.available(upd)) {
+                noticesBox.addView(Updater.banner(this@ActivationActivity, upd!!), Ui.vlp(this@ActivationActivity, 0, 12))
+            }
             val arr = json.optJSONArray("notices") ?: return@launch
             for (i in 0 until arr.length()) {
                 val o = arr.optJSONObject(i) ?: continue
@@ -175,8 +171,8 @@ class ActivationActivity : AppCompatActivity() {
         loginBox.visibility = if (code) android.view.View.GONE else android.view.View.VISIBLE
         codeBox.visibility = if (code) android.view.View.VISIBLE else android.view.View.GONE
         titleView.text = if (code) "Ative o seu acesso" else "Entre com o seu acesso"
-        sub.text = if (code) "Digite o código de 8 números que você recebeu no e-mail do teste ou pelo WhatsApp."
-        else "Digite o usuário e a senha que você recebeu no e-mail do teste ou pelo WhatsApp."
+        sub.text = if (code) "Digite o código de 8 números que você recebeu no e-mail do teste ou com o seu fornecedor."
+        else "Digite o usuário e a senha que você recebeu no e-mail do teste ou com o seu fornecedor."
         button.text = if (code) "Ativar" else "Entrar"
         toggle.text = if (code) "Entrar com usuário e senha" else "Tenho um código de ativação"
         setMessage("", false)

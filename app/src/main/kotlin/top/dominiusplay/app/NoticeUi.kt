@@ -24,10 +24,6 @@ object NoticeUi {
         }
     }
 
-    fun whatsapp(ctx: Context, text: String) {
-        open(ctx, "https://wa.me/" + Prefs.supportWhatsapp + "?text=" + Uri.encode(text))
-    }
-
     private fun countView(n: Notice) {
         if (counted.add(n.id)) PanelApi.noticeEvent(n.id, "view")
     }
