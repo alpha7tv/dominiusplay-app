@@ -25,7 +25,7 @@ class ActivationActivity : AppCompatActivity() {
     private lateinit var loginBox: LinearLayout
     private lateinit var codeBox: LinearLayout
     private lateinit var sub: TextView
-    private lateinit var title: TextView
+    private lateinit var titleView: TextView
     private lateinit var toggle: TextView
     private var codeMode = false
     private lateinit var message: TextView
@@ -46,8 +46,8 @@ class ActivationActivity : AppCompatActivity() {
         col.setPadding(pad, Ui.dp(this, 40), pad, pad)
 
         col.addView(Ui.logo(this, 34f))
-        title = Ui.text(this, "Entre com o seu acesso", 22f, Ui.TEXT, true)
-        col.addView(title, Ui.vlp(this, 28, 6))
+        titleView = Ui.text(this, "Entre com o seu acesso", 22f, Ui.TEXT, true)
+        col.addView(titleView, Ui.vlp(this, 28, 6))
         sub = Ui.text(this, "Digite o usuário e a senha que você recebeu no e-mail do teste ou pelo WhatsApp.", 14f, Ui.MUTED)
         sub.gravity = Gravity.CENTER
         col.addView(sub, Ui.vlp(this, 0, 18))
@@ -174,7 +174,7 @@ class ActivationActivity : AppCompatActivity() {
         codeMode = code
         loginBox.visibility = if (code) android.view.View.GONE else android.view.View.VISIBLE
         codeBox.visibility = if (code) android.view.View.VISIBLE else android.view.View.GONE
-        title.text = if (code) "Ative o seu acesso" else "Entre com o seu acesso"
+        titleView.text = if (code) "Ative o seu acesso" else "Entre com o seu acesso"
         sub.text = if (code) "Digite o código de 8 números que você recebeu no e-mail do teste ou pelo WhatsApp."
         else "Digite o usuário e a senha que você recebeu no e-mail do teste ou pelo WhatsApp."
         button.text = if (code) "Ativar" else "Entrar"
