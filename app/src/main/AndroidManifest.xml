@@ -21,20 +21,21 @@
         <activity
             android:name=".SplashActivity"
             android:exported="true"
-            android:screenOrientation="unspecified">
+            android:screenOrientation="sensorLandscape">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
         </activity>
-        <activity android:name=".ActivationActivity" android:exported="false" android:windowSoftInputMode="adjustResize" />
-        <activity android:name=".HomeActivity" android:exported="false" />
-        <activity android:name=".BrowseActivity" android:exported="false" android:windowSoftInputMode="adjustPan" />
+        <activity android:name=".ActivationActivity" android:exported="false" android:screenOrientation="sensorLandscape" android:windowSoftInputMode="adjustResize" />
+        <activity android:name=".HomeActivity" android:exported="false" android:screenOrientation="sensorLandscape" />
+        <activity android:name=".BrowseActivity" android:exported="false" android:screenOrientation="sensorLandscape" android:windowSoftInputMode="adjustPan" />
         <activity
             android:name=".PlayerActivity"
             android:exported="false"
             android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|smallestScreenSize"
+            android:screenOrientation="sensorLandscape"
             android:supportsPictureInPicture="false" />
     </application>
 </manifest>
