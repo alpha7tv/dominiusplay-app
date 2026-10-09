@@ -9,7 +9,9 @@ import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
 import android.widget.TextView
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
+import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
@@ -17,6 +19,9 @@ import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.ui.PlayerView
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Reprodução de canais (com troca por cima/baixo no controle), filmes e episódios. */
 class PlayerActivity : AppCompatActivity() {
@@ -41,6 +46,11 @@ class PlayerActivity : AppCompatActivity() {
         view.useController = !PlayQueue.live
         view.setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
         root.addView(view, FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH))
+        if (PlayQueue.live) {
+            // celular: toque mostra o canal e o guia; toque longo abre a programação do dia
+            view.setOnClickListener { showTitle(titleWithGuide(currentItem())) }
+            view.setOnLongClickListener { showGuide(); true }
+        }
 
         overlay = Ui.text(this, "", 18f, android.graphics.Color.WHITE, true)
         overlay.background = Ui.shape(this, android.graphics.Color.parseColor("#B3070A12"), 12)
@@ -99,7 +109,54 @@ class PlayerActivity : AppCompatActivity() {
         player?.setMediaItem(MediaItem.fromUri(url))
         player?.prepare()
         player?.playWhenReady = true
-        showTitle(item.title)
+        showTitle(titleWithGuide(item))
+        val entry = item.entry
+        if (PlayQueue.live && entry != null) {
+            val index = PlayQueue.index
+            lifecycleScope.launch {
+                val changed = withContext(Dispatchers.IO) { Guide.load(listOf(entry)) }
+                if (changed && index == PlayQueue.index && overlay.visibility == View.VISIBLE) overlay.text = titleWithGuide(item)
+            }
+        }
+    }
+
+    /** Nome do canal com "Agora / Depois" do guia, quando houver. */
+    private fun titleWithGuide(item: PlayItem): String {
+        val e = item.entry ?: return item.title
+        val line = Guide.nowNextLine(Guide.cached(e.id))
+        return if (line.isEmpty()) item.title else item.title + "\n" + line
+    }
+
+    /** Programação de hoje do canal atual. */
+    private fun showGuide() {
+        val e = currentItem().entry ?: return
+        lifecycleScope.launch {
+            val list = withContext(Dispatchers.IO) { Guide.channel(e) }
+            if (isFinishing) return@launch
+            if (list.isEmpty()) {
+                showTitle(e.title + "\nProgramação não disponível para este canal.")
+                return@launch
+            }
+            val t = System.currentTimeMillis() / 1000
+            var current = 0
+            val labels = list.mapIndexed { i, p ->
+                val on = p.start <= t && p.end > t
+                if (on) current = i
+                Guide.time(p.start) + " - " + Guide.time(p.end) + (if (on) "   ▶ AGORA   " else "   ") + p.title
+            }.toTypedArray()
+            val dialog = AlertDialog.Builder(this@PlayerActivity)
+                .setTitle("Programação - " + e.title)
+                .setItems(labels) { _, which ->
+                    val p = list[which]
+                    if (p.desc.isNotEmpty()) {
+                        AlertDialog.Builder(this@PlayerActivity).setTitle(p.title).setMessage(p.desc).setPositiveButton("OK", null).show()
+                    }
+                }
+                .setNegativeButton("Fechar", null)
+                .create()
+            dialog.show()
+            dialog.listView?.setSelection(current)
+        }
     }
 
     private fun showTitle(text: String) {
@@ -144,7 +201,11 @@ class PlayerActivity : AppCompatActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    showTitle(currentItem().title)
+                    showTitle(titleWithGuide(currentItem()))
+                    return true
+                }
+                KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MENU -> {
+                    showGuide()
                     return true
                 }
             }

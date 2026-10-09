@@ -51,7 +51,7 @@ class EntryAdapter(
 
     var items: List<Entry> = emptyList()
 
-    class VH(val root: LinearLayout, val img: ImageView, val title: TextView) : RecyclerView.ViewHolder(root)
+    class VH(val root: LinearLayout, val img: ImageView, val title: TextView, val sub: TextView?) : RecyclerView.ViewHolder(root)
 
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): VH {
         val ctx = parent.context
@@ -63,6 +63,7 @@ class EntryAdapter(
         val title = TextView(ctx)
         title.setTextColor(Ui.TEXT)
         title.maxLines = 2
+        var sub: TextView? = null
         if (poster) {
             root.orientation = LinearLayout.VERTICAL
             root.setPadding(Ui.dp(ctx, 6), Ui.dp(ctx, 6), Ui.dp(ctx, 6), Ui.dp(ctx, 8))
@@ -81,19 +82,37 @@ class EntryAdapter(
             img.scaleType = ImageView.ScaleType.FIT_CENTER
             root.addView(img, LinearLayout.LayoutParams(Ui.dp(ctx, 56), Ui.dp(ctx, 40)))
             title.textSize = 16f
+            title.maxLines = 1
+            // nome do canal + linha do guia ("Agora: ...")
+            val col = LinearLayout(ctx)
+            col.orientation = LinearLayout.VERTICAL
+            col.addView(title)
+            val s = TextView(ctx)
+            s.textSize = 12f
+            s.setTextColor(Ui.MUTED)
+            s.maxLines = 1
+            s.ellipsize = android.text.TextUtils.TruncateAt.END
+            s.visibility = android.view.View.GONE
+            col.addView(s, Ui.vlp(ctx, 2, 0))
+            sub = s
             val lp = LinearLayout.LayoutParams(0, Ui.WRAP, 1f)
             lp.setMargins(Ui.dp(ctx, 12), 0, 0, 0)
-            root.addView(title, lp)
+            root.addView(col, lp)
             root.layoutParams = RecyclerView.LayoutParams(Ui.MATCH, Ui.WRAP).apply {
                 setMargins(Ui.dp(ctx, 4), Ui.dp(ctx, 3), Ui.dp(ctx, 4), Ui.dp(ctx, 3))
             }
         }
-        return VH(root, img, title)
+        return VH(root, img, title, sub)
     }
 
     override fun onBindViewHolder(holder: VH, position: Int) {
         val e = items[position]
         holder.title.text = e.title
+        holder.sub?.let { s ->
+            val line = Guide.nowLine(Guide.cached(e.id))
+            s.text = line
+            s.visibility = if (line.isEmpty()) android.view.View.GONE else android.view.View.VISIBLE
+        }
         if (e.image.isNotBlank()) {
             holder.img.load(e.image) { crossfade(true) }
         } else {

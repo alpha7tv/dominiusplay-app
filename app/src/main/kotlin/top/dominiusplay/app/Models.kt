@@ -135,7 +135,7 @@ object Session {
 }
 
 /** Item de lista (canal, filme ou série). */
-data class Entry(val id: String, val title: String, val image: String, val ext: String)
+data class Entry(val id: String, val title: String, val image: String, val ext: String, val epg: String = "")
 
 /** Destaque da tela inicial: filme ou série recém-adicionado. */
 data class Featured(val entry: Entry, val series: Boolean, val ts: Long)
@@ -144,7 +144,7 @@ data class Category(val id: String, val name: String)
 
 data class Episode(val id: String, val title: String, val season: Int, val number: Int, val ext: String)
 
-data class PlayItem(val title: String, val url: String, val altUrl: String?)
+data class PlayItem(val title: String, val url: String, val altUrl: String?, val entry: Entry? = null)
 
 /** Fila de reprodução compartilhada entre a lista e o player (zapping de canais, próximos episódios). */
 object PlayQueue {

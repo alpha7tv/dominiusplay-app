@@ -47,7 +47,7 @@ class Xtream(server: String, private val user: String, private val pass: String)
         val out = ArrayList<Entry>()
         for (i in 0 until a.length()) {
             val o = a.optJSONObject(i) ?: continue
-            out.add(Entry(o.str("stream_id"), o.str("name"), o.str("stream_icon"), ""))
+            out.add(Entry(o.str("stream_id"), o.str("name"), o.str("stream_icon"), "", o.str("epg_channel_id")))
         }
         return out
     }

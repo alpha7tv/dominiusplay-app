@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -182,13 +183,26 @@ class BrowseActivity : AppCompatActivity() {
         entryAdapter.items = list
         entryAdapter.notifyDataSetChanged()
         setStatus(if (list.isEmpty()) "Nada encontrado." else "")
+        loadGuide(list)
+    }
+
+    private var guideJob: Job? = null
+
+    /** Guia de programação dos canais da lista ("Agora: ..." em cada linha). */
+    private fun loadGuide(list: List<Entry>) {
+        if (mode != "live" || list.isEmpty()) return
+        guideJob?.cancel()
+        guideJob = lifecycleScope.launch {
+            val changed = withContext(Dispatchers.IO) { Guide.load(list) }
+            if (changed && entryAdapter.items === list) entryAdapter.notifyItemRangeChanged(0, list.size)
+        }
     }
 
     private fun open(e: Entry, index: Int) {
         when (mode) {
             "live" -> {
                 val list = entryAdapter.items
-                PlayQueue.items = list.map { PlayItem(it.title, xt.liveUrl(it.id), xt.liveTsUrl(it.id)) }
+                PlayQueue.items = list.map { PlayItem(it.title, xt.liveUrl(it.id), xt.liveTsUrl(it.id), it) }
                 PlayQueue.index = if (index in list.indices) index else 0
                 PlayQueue.live = true
                 startActivity(Intent(this, PlayerActivity::class.java))
