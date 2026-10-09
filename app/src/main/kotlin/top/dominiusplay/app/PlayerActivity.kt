@@ -163,7 +163,7 @@ class PlayerActivity : AppCompatActivity() {
         overlay.text = text
         overlay.visibility = View.VISIBLE
         handler.removeCallbacks(hideOverlay)
-        handler.postDelayed(hideOverlay, 3500)
+        handler.postDelayed(hideOverlay, 5000)
     }
 
     private fun onError() {
