@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Dominius Play</string>
+    <!-- app_name vem de cada edição (iptv / express) em app/build.gradle.kts -->
 </resources>

@@ -73,6 +73,8 @@ object Session {
     fun clear() {
         Prefs.clearSession()
         current = null
+        Resolver.clear()
+        Xtream.clearCache()
     }
 
     fun parse(j: JSONObject, fetchedAt: Long): SessionData {

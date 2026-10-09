@@ -108,7 +108,7 @@ object Ui {
 
     fun logo(ctx: Context, sizeSp: Float = 26f): TextView {
         val t = TextView(ctx)
-        val s = SpannableString("DOMINIUS PLAY")
+        val s = SpannableString(if (BuildConfig.EXPRESS) "DOMINIUS PLAY P2P EXPRESS" else "DOMINIUS PLAY")
         s.setSpan(ForegroundColorSpan(ORANGE), 9, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         t.text = s
         t.setTextColor(Color.WHITE)

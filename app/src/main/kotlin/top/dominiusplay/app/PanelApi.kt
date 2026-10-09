@@ -39,7 +39,7 @@ object PanelApi {
     }
 
     fun info(): Result {
-        val req = Request.Builder().url("$BASE/api/app/info").header("User-Agent", DominiusApp.USER_AGENT).build()
+        val req = Request.Builder().url("$BASE/api/app/info?app_type=" + BuildConfig.APP_TYPE).header("User-Agent", DominiusApp.USER_AGENT).build()
         return call(req)
     }
 
@@ -49,6 +49,7 @@ object PanelApi {
         b.put("device_key", Prefs.deviceKey)
         b.put("model", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL)
         b.put("app_version", BuildConfig.VERSION_NAME)
+        b.put("app_type", BuildConfig.APP_TYPE)
         return post("/api/app/ativar", b)
     }
 
@@ -59,6 +60,7 @@ object PanelApi {
         b.put("device_key", Prefs.deviceKey)
         b.put("model", android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL)
         b.put("app_version", BuildConfig.VERSION_NAME)
+        b.put("app_type", BuildConfig.APP_TYPE)
         return post("/api/app/entrar", b)
     }
 
@@ -67,6 +69,7 @@ object PanelApi {
         b.put("token", Prefs.token)
         b.put("device_key", Prefs.deviceKey)
         b.put("app_version", BuildConfig.VERSION_NAME)
+        b.put("app_type", BuildConfig.APP_TYPE)
         return post("/api/app/atualizar", b)
     }
 

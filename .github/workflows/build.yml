@@ -53,18 +53,21 @@ jobs:
           fi
 
       - name: Compilar
-        run: gradle --no-daemon :app:assembleRelease -PVERSION_CODE=${{ github.run_number }}
+        run: gradle --no-daemon :app:assembleIptvRelease :app:assembleExpressRelease -PVERSION_CODE=${{ github.run_number }}
 
-      - name: Preparar o APK
+      - name: Preparar os APKs
         run: |
-          cp app/build/outputs/apk/release/app-release.apk dominiusplay.apk
-          ls -l dominiusplay.apk
-          sha256sum dominiusplay.apk
+          cp app/build/outputs/apk/iptv/release/app-iptv-release.apk dominiusplay.apk
+          cp app/build/outputs/apk/express/release/app-express-release.apk dominiusplay-express.apk
+          ls -l dominiusplay.apk dominiusplay-express.apk
+          sha256sum dominiusplay.apk dominiusplay-express.apk
 
       - uses: actions/upload-artifact@v4
         with:
           name: dominiusplay-apk
-          path: dominiusplay.apk
+          path: |
+            dominiusplay.apk
+            dominiusplay-express.apk
 
       - name: Publicar a versão
         uses: softprops/action-gh-release@v2
@@ -72,6 +75,8 @@ jobs:
           tag_name: build-${{ github.run_number }}
           name: Dominius Play 1.0.${{ github.run_number }} (número da versão ${{ github.run_number }})
           body: |
-            Aplicativo Dominius Play, versão **1.0.${{ github.run_number }}**.
-            No painel (App Dominius → Versões do app), use o **número da versão ${{ github.run_number }}** e o nome **1.0.${{ github.run_number }}**.
-          files: dominiusplay.apk
+            Aplicativos Dominius Play (dominiusplay.apk) e Dominius Play P2P EXPRESS (dominiusplay-express.apk), versão **1.0.${{ github.run_number }}**.
+            O painel publica os dois sozinho: use o **número da versão ${{ github.run_number }}** e o nome **1.0.${{ github.run_number }}**.
+          files: |
+            dominiusplay.apk
+            dominiusplay-express.apk

@@ -18,6 +18,24 @@ android {
         versionName = "1.0.$appVersionCode"
     }
 
+    // Duas edições do mesmo código: "iptv" (Dominius Play) e "express" (Dominius Play P2P EXPRESS, abertura rápida de canais)
+    flavorDimensions += "edicao"
+    productFlavors {
+        create("iptv") {
+            dimension = "edicao"
+            buildConfigField("String", "APP_TYPE", "\"iptv\"")
+            buildConfigField("boolean", "EXPRESS", "false")
+            resValue("string", "app_name", "Dominius Play")
+        }
+        create("express") {
+            dimension = "edicao"
+            applicationIdSuffix = ".express"
+            buildConfigField("String", "APP_TYPE", "\"express\"")
+            buildConfigField("boolean", "EXPRESS", "true")
+            resValue("string", "app_name", "Dominius Play P2P EXPRESS")
+        }
+    }
+
     signingConfigs {
         create("release") {
             val ksFile = System.getenv("KEYSTORE_FILE")

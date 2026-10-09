@@ -16,8 +16,11 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.okhttp.OkHttpDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.extractor.DefaultExtractorsFactory
+import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -32,6 +35,7 @@ class PlayerActivity : AppCompatActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val hideOverlay = Runnable { overlay.visibility = View.GONE }
     private var triedAlt = false
+    private var usedFast = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -73,9 +77,23 @@ class PlayerActivity : AppCompatActivity() {
         super.onStart()
         if (PlayQueue.items.isEmpty()) return
         val data = OkHttpDataSource.Factory(DominiusApp.http).setUserAgent(DominiusApp.USER_AGENT)
-        val p = ExoPlayer.Builder(this)
-            .setMediaSourceFactory(DefaultMediaSourceFactory(data))
-            .build()
+        val builder = ExoPlayer.Builder(this)
+        if (BuildConfig.EXPRESS) {
+            // Express: começa a tocar com meio segundo de vídeo, procura menos no começo do fluxo e aceita o primeiro quadro-chave
+            val extractors = DefaultExtractorsFactory()
+                .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES)
+                .setTsExtractorTimestampSearchBytes(188 * 150)
+            builder.setMediaSourceFactory(DefaultMediaSourceFactory(data, extractors))
+            builder.setLoadControl(
+                DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(2500, 20_000, 500, 1000)
+                    .setPrioritizeTimeOverSizeThresholds(true)
+                    .build()
+            )
+        } else {
+            builder.setMediaSourceFactory(DefaultMediaSourceFactory(data))
+        }
+        val p = builder.build()
         p.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 onError()
@@ -101,14 +119,18 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun currentItem(): PlayItem = PlayQueue.items[PlayQueue.index]
 
-    private fun play(useAlt: Boolean) {
+    private fun play(useAlt: Boolean, raw: Boolean = false) {
         val item = currentItem()
         val url = if (useAlt && item.altUrl != null) item.altUrl else item.url
         triedAlt = useAlt
+        // Express: usa o endereço final descoberto antes do clique (se houver); se falhar, onError() refaz pelo caminho normal
+        val fast = if (!raw && PlayQueue.live) Resolver.take(url) else null
+        usedFast = fast != null
         message.visibility = View.GONE
-        player?.setMediaItem(MediaItem.fromUri(url))
+        player?.setMediaItem(MediaItem.fromUri(fast ?: url))
         player?.prepare()
         player?.playWhenReady = true
+        if (PlayQueue.live) prefetchNeighbors()
         showTitle(titleWithGuide(item))
         val entry = item.entry
         if (PlayQueue.live && entry != null) {
@@ -166,8 +188,24 @@ class PlayerActivity : AppCompatActivity() {
         handler.postDelayed(hideOverlay, 5000)
     }
 
+    /** Deixa pronto o endereço dos canais de cima e de baixo, para a troca de canal ser mais rápida. */
+    private fun prefetchNeighbors() {
+        val size = PlayQueue.items.size
+        if (size < 2) return
+        val i = PlayQueue.index
+        for (d in intArrayOf(1, -1)) {
+            val it = PlayQueue.items[((i + d) % size + size) % size]
+            Resolver.prefetch(if (triedAlt && it.altUrl != null) it.altUrl else it.url)
+        }
+    }
+
     private fun onError() {
         val item = currentItem()
+        if (usedFast) { // o endereço antecipado não funcionou: tenta o normal antes de desistir
+            usedFast = false
+            play(triedAlt, raw = true)
+            return
+        }
         if (!triedAlt && item.altUrl != null) {
             play(true)
             return
