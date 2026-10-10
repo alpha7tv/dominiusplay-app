@@ -10,6 +10,7 @@
         <item name="colorPrimary">@color/orange</item>
         <item name="colorPrimaryDark">@color/bg</item>
         <item name="alertDialogTheme">@style/Theme.Dominius.Dialog</item>
+        <item name="mediaRouteButtonTint">#FFFFFF</item>
     </style>
     <style name="Theme.Dominius.Dialog" parent="Theme.AppCompat.Dialog.Alert">
         <item name="android:windowBackground">@drawable/dialog_bg</item>

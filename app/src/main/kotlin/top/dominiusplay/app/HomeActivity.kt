@@ -18,7 +18,7 @@ import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 
-class HomeActivity : AppCompatActivity() {
+class HomeActivity : BaseActivity() {
     private lateinit var content: LinearLayout
     private var lastRefresh = 0L
     private var shownPopup = false
@@ -112,6 +112,7 @@ class HomeActivity : AppCompatActivity() {
         val st = Ui.text(this, statusText(s), 13f, Ui.YELLOW, true)
         st.setPadding(0, 0, Ui.dp(this, 12), 0)
         row.addView(st)
+        Cast.button(this)?.let { b -> row.addView(b, LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44))) }
         val cfg = Ui.ghostButton(this, "Configurações") { showSettings() }
         cfg.setPadding(Ui.dp(this, 14), Ui.dp(this, 8), Ui.dp(this, 14), Ui.dp(this, 8))
         cfg.textSize = 13f
@@ -194,6 +195,18 @@ class HomeActivity : AppCompatActivity() {
         Updater.dialog(this, u)
     }
 
+    /** Espelhamento de tela do próprio Android (Miracast/Smart View), para quem não usa o botão de transmissão. */
+    private fun mirrorScreen() {
+        val intents = listOf("android.settings.CAST_SETTINGS", "android.settings.WIFI_DISPLAY_SETTINGS")
+        for (a in intents) {
+            try {
+                startActivity(Intent(a))
+                return
+            } catch (e: Exception) { /* tenta o próximo */ }
+        }
+        android.widget.Toast.makeText(this, "Este aparelho não tem espelhamento de tela nas configurações.", android.widget.Toast.LENGTH_LONG).show()
+    }
+
     private fun showSettings() {
         val s = Session.current ?: return
         val info = "Cliente: " + s.clientName + "\n" + statusText(s) + "\nVersão do app: " + BuildConfig.VERSION_NAME
@@ -201,6 +214,7 @@ class HomeActivity : AppCompatActivity() {
             .setTitle("Configurações")
             .setMessage(info)
             .setPositiveButton("Fechar", null)
+            .setNeutralButton("Espelhar a tela") { _, _ -> mirrorScreen() }
             .setNegativeButton("Sair deste aparelho") { _, _ ->
                 Session.clear()
                 goActivation(null)

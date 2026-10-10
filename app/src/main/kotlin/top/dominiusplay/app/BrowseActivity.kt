@@ -23,7 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Lista de categorias + itens para Canais ao vivo, Filmes e Séries. */
-class BrowseActivity : AppCompatActivity() {
+class BrowseActivity : BaseActivity() {
     private lateinit var mode: String
     private lateinit var xt: Xtream
     private lateinit var status: TextView
@@ -80,6 +80,7 @@ class BrowseActivity : AppCompatActivity() {
             }
         })
         header.addView(search, LinearLayout.LayoutParams(Ui.dp(this, if (narrow) 150 else 280), Ui.WRAP))
+        Cast.button(this)?.let { b -> header.addView(b, LinearLayout.LayoutParams(Ui.dp(this, 44), Ui.dp(this, 44))) }
         root.addView(header)
 
         status = Ui.text(this, "", 14f, Ui.MUTED)

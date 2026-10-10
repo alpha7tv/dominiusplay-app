@@ -8,6 +8,8 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.LinearLayout
+import android.widget.Toast
 import android.widget.TextView
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
@@ -27,7 +29,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /** Reprodução de canais (com troca por cima/baixo no controle), filmes e episódios. */
-class PlayerActivity : AppCompatActivity() {
+class PlayerActivity : BaseActivity() {
     private var player: ExoPlayer? = null
     private lateinit var view: PlayerView
     private lateinit var overlay: TextView
@@ -36,6 +38,12 @@ class PlayerActivity : AppCompatActivity() {
     private val hideOverlay = Runnable { overlay.visibility = View.GONE }
     private var triedAlt = false
     private var usedFast = false
+
+    // transmissão para a Smart TV
+    private lateinit var castBar: LinearLayout
+    private lateinit var castText: TextView
+    private var casting = false
+    private var castSessionListener: CastSessionAdapter? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -69,6 +77,33 @@ class PlayerActivity : AppCompatActivity() {
         message.background = Ui.shape(this, android.graphics.Color.parseColor("#D9070A12"), 14)
         message.setPadding(Ui.dp(this, 20), Ui.dp(this, 14), Ui.dp(this, 20), Ui.dp(this, 14))
         root.addView(message, FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.CENTER))
+
+        // ícone de transmissão (aparece só em aparelhos com Google Play Services)
+        Cast.button(this)?.let { b ->
+            val lp = FrameLayout.LayoutParams(Ui.dp(this, 48), Ui.dp(this, 48), Gravity.TOP or Gravity.END)
+            lp.setMargins(0, Ui.dp(this, 20), Ui.dp(this, 24), 0)
+            root.addView(b, lp)
+        }
+        castBar = LinearLayout(this)
+        castBar.orientation = LinearLayout.VERTICAL
+        castBar.gravity = Gravity.CENTER
+        castBar.visibility = View.GONE
+        castBar.setBackgroundColor(android.graphics.Color.parseColor("#F2070A12"))
+        castText = Ui.text(this, "", 22f, android.graphics.Color.WHITE, true)
+        castText.gravity = Gravity.CENTER
+        castBar.addView(castText)
+        val buttons = LinearLayout(this)
+        buttons.orientation = LinearLayout.HORIZONTAL
+        buttons.gravity = Gravity.CENTER
+        if (!PlayQueue.live) {
+            buttons.addView(Ui.ghostButton(this, "Pausar / Continuar") {
+                val rc = Cast.remote(this)
+                if (rc != null) { if (rc.isPlaying) rc.pause() else rc.play() }
+            }, Ui.vlp(this, 0, 0, Ui.WRAP, Ui.WRAP))
+        }
+        buttons.addView(Ui.primaryButton(this, "Parar transmissão") { Cast.endSession(this) }, Ui.vlp(this, 0, 0, Ui.WRAP, Ui.WRAP))
+        castBar.addView(buttons, Ui.vlp(this, 16, 0, Ui.WRAP, Ui.WRAP))
+        root.addView(castBar, FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH))
 
         setContentView(root)
     }
@@ -106,11 +141,13 @@ class PlayerActivity : AppCompatActivity() {
         })
         view.player = p
         player = p
+        registerCastListener()
         play(false)
     }
 
     override fun onStop() {
         super.onStop()
+        unregisterCastListener()
         handler.removeCallbacks(hideOverlay)
         view.player = null
         player?.release()
@@ -121,6 +158,10 @@ class PlayerActivity : AppCompatActivity() {
 
     private fun play(useAlt: Boolean, raw: Boolean = false) {
         val item = currentItem()
+        if (Cast.session(this) != null) {  // há uma TV conectada: o vídeo vai para ela, não para esta tela
+            castCurrent()
+            return
+        }
         val url = if (useAlt && item.altUrl != null) item.altUrl else item.url
         triedAlt = useAlt
         // Express: usa o endereço final descoberto antes do clique (se houver); se falhar, onError() refaz pelo caminho normal
@@ -186,6 +227,53 @@ class PlayerActivity : AppCompatActivity() {
         overlay.visibility = View.VISIBLE
         handler.removeCallbacks(hideOverlay)
         handler.postDelayed(hideOverlay, 5000)
+    }
+
+    // ------------------------------------------------------------------ transmissão para a Smart TV
+
+    private fun registerCastListener() {
+        val sm = Cast.context(this)?.sessionManager ?: return
+        val l = object : CastSessionAdapter() {
+            override fun onSessionStarted(session: com.google.android.gms.cast.framework.CastSession, sessionId: String) { runOnUiThread { castCurrent() } }
+            override fun onSessionResumed(session: com.google.android.gms.cast.framework.CastSession, wasSuspended: Boolean) { runOnUiThread { castCurrent() } }
+            override fun onSessionEnded(session: com.google.android.gms.cast.framework.CastSession, error: Int) { runOnUiThread { backToDevice() } }
+        }
+        castSessionListener = l
+        sm.addSessionManagerListener(l, com.google.android.gms.cast.framework.CastSession::class.java)
+    }
+
+    private fun unregisterCastListener() {
+        val l = castSessionListener ?: return
+        try {
+            Cast.context(this)?.sessionManager?.removeSessionManagerListener(l, com.google.android.gms.cast.framework.CastSession::class.java)
+        } catch (e: Exception) { /* sem importância */ }
+        castSessionListener = null
+    }
+
+    /** Envia o canal/filme atual para a TV e para de tocar neste aparelho. */
+    private fun castCurrent() {
+        if (PlayQueue.items.isEmpty()) return
+        val item = currentItem()
+        val live = PlayQueue.live
+        val pos = player?.currentPosition ?: 0L
+        player?.stop()
+        casting = true
+        castBar.visibility = View.VISIBLE
+        castText.text = "Transmitindo para " + Cast.deviceName(this) + "\n" + item.title
+        if (!Cast.isLoaded(this, item, live)) {
+            if (!Cast.load(this, item, live, pos)) {
+                backToDevice()
+                Toast.makeText(this, "Não foi possível transmitir. Tente de novo.", Toast.LENGTH_LONG).show()
+            }
+        }
+    }
+
+    /** A transmissão acabou: volta a tocar neste aparelho. */
+    private fun backToDevice() {
+        if (!casting) return
+        casting = false
+        castBar.visibility = View.GONE
+        if (!isFinishing && player != null) play(false)
     }
 
     /** Deixa pronto o endereço dos canais de cima e de baixo, para a troca de canal ser mais rápida. */

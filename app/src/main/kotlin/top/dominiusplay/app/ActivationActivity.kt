@@ -18,7 +18,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class ActivationActivity : AppCompatActivity() {
+class ActivationActivity : BaseActivity() {
     private lateinit var input: EditText
     private lateinit var userInput: EditText
     private lateinit var passInput: EditText
