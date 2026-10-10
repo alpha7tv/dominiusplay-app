@@ -55,9 +55,24 @@ object Cast {
         try { context(ctx)?.sessionManager?.endCurrentSession(true) } catch (e: Exception) { /* já encerrada */ }
     }
 
-    /** Endereço que a TV vai abrir: canais ao vivo em HLS (a TV não toca o fluxo direto), filmes e episódios no arquivo. */
-    fun urlFor(item: PlayItem, live: Boolean): String =
-        if (live) listOfNotNull(item.url, item.altUrl).firstOrNull { it.contains(".m3u8") } ?: item.url else item.url
+    /** Repasse na VPS (HTTPS e CORS): a TV só toca HLS e arquivos de vídeo servidos assim. */
+    const val EDGE = "https://player.dominiusplay.top"
+    private val LIVE_RE = Regex("/live/([^/]+)/([^/]+)/(\\d+)\\.(?:m3u8|ts)")
+    private val VOD_RE = Regex("/(movie|series)/([^/]+)/([^/]+)/(\\d+)\\.([A-Za-z0-9]{2,5})")
+
+    /** Endereço que a TV vai abrir: canal ao vivo em HLS e filme/episódio, ambos pelo repasse da VPS. */
+    fun urlFor(item: PlayItem, live: Boolean): String {
+        val raw = if (live) listOfNotNull(item.url, item.altUrl).firstOrNull { it.contains(".m3u8") } ?: item.url else item.url
+        val path = raw.substringBefore('?')
+        if (live) {
+            LIVE_RE.find(path)?.let { return EDGE + "/rl/" + it.groupValues[1] + "/" + it.groupValues[2] + "/" + it.groupValues[3] + ".m3u8" }
+        } else {
+            VOD_RE.find(path)?.let { m ->
+                return EDGE + "/cv/" + m.groupValues[1] + "/" + m.groupValues[2] + "/" + m.groupValues[3] + "/" + m.groupValues[4] + "." + m.groupValues[5]
+            }
+        }
+        return raw
+    }
 
     private fun typeFor(url: String, live: Boolean): String = when {
         live || url.contains(".m3u8") -> "application/x-mpegURL"

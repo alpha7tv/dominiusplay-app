@@ -40,8 +40,11 @@ class PlayerActivity : BaseActivity() {
     private var usedFast = false
 
     // transmissão para a Smart TV
-    private lateinit var castBar: LinearLayout
+    private lateinit var castBar: View
     private lateinit var castText: TextView
+    private lateinit var castGuide: TextView
+    private var castCallback: com.google.android.gms.cast.framework.media.RemoteMediaClient.Callback? = null
+    private var numBuf = ""
     private var casting = false
     private var castSessionListener: CastSessionAdapter? = null
 
@@ -84,25 +87,41 @@ class PlayerActivity : BaseActivity() {
             lp.setMargins(0, Ui.dp(this, 20), Ui.dp(this, 24), 0)
             root.addView(b, lp)
         }
-        castBar = LinearLayout(this)
-        castBar.orientation = LinearLayout.VERTICAL
-        castBar.gravity = Gravity.CENTER
-        castBar.visibility = View.GONE
-        castBar.setBackgroundColor(android.graphics.Color.parseColor("#F2070A12"))
-        castText = Ui.text(this, "", 22f, android.graphics.Color.WHITE, true)
+        // Controle remoto da transmissão: troca de canal, lista, volume, pausa/avanço e parar
+        val remote = LinearLayout(this)
+        remote.orientation = LinearLayout.VERTICAL
+        remote.gravity = Gravity.CENTER
+        remote.setPadding(Ui.dp(this, 16), Ui.dp(this, 12), Ui.dp(this, 16), Ui.dp(this, 12))
+        castText = Ui.text(this, "", 20f, android.graphics.Color.WHITE, true)
         castText.gravity = Gravity.CENTER
-        castBar.addView(castText)
-        val buttons = LinearLayout(this)
-        buttons.orientation = LinearLayout.HORIZONTAL
-        buttons.gravity = Gravity.CENTER
-        if (!PlayQueue.live) {
-            buttons.addView(Ui.ghostButton(this, "Pausar / Continuar") {
-                val rc = Cast.remote(this)
-                if (rc != null) { if (rc.isPlaying) rc.pause() else rc.play() }
-            }, Ui.vlp(this, 0, 0, Ui.WRAP, Ui.WRAP))
+        remote.addView(castText)
+        castGuide = Ui.text(this, "", 13f, Ui.MUTED)
+        castGuide.gravity = Gravity.CENTER
+        remote.addView(castGuide, Ui.vlp(this, 2, 8))
+        val isLive = PlayQueue.live
+        val nav = ArrayList<View>()
+        nav.add(rbtn(if (isLive) "◀ Canal" else "◀ Anterior") { next(-1) })
+        if (!isLive) {
+            nav.add(rbtn("⏪ 30s") { seekRemote(-30_000L) })
+            nav.add(rbtn("⏪ 10s") { seekRemote(-10_000L) })
+            nav.add(rbtn("⏯") { Cast.remote(this)?.togglePlayback() })
+            nav.add(rbtn("10s ⏩") { seekRemote(10_000L) })
+            nav.add(rbtn("30s ⏩") { seekRemote(30_000L) })
         }
-        buttons.addView(Ui.primaryButton(this, "Parar transmissão") { Cast.endSession(this) }, Ui.vlp(this, 0, 0, Ui.WRAP, Ui.WRAP))
-        castBar.addView(buttons, Ui.vlp(this, 16, 0, Ui.WRAP, Ui.WRAP))
+        nav.add(rbtn(if (isLive) "Canal ▶" else "Próximo ▶") { next(1) })
+        remote.addView(remoteRow(nav), Ui.vlp(this, 4, 0, Ui.WRAP, Ui.WRAP))
+        remote.addView(remoteRow(listOf(rbtn("🔉 −") { volume(-0.06) }, rbtn("🔇 Mudo") { toggleMute() }, rbtn("🔊 +") { volume(0.06) })), Ui.vlp(this, 4, 0, Ui.WRAP, Ui.WRAP))
+        val extra = ArrayList<View>()
+        extra.add(rbtn("📋 Lista") { showChannelList() })
+        if (isLive) extra.add(rbtn("📅 Guia") { showGuide() })
+        extra.add(Ui.primaryButton(this, "■ Parar transmissão") { Cast.endSession(this) })
+        remote.addView(remoteRow(extra), Ui.vlp(this, 4, 0, Ui.WRAP, Ui.WRAP))
+        val scroll = android.widget.ScrollView(this)
+        scroll.isFillViewport = true
+        scroll.setBackgroundColor(android.graphics.Color.parseColor("#F2070A12"))
+        scroll.visibility = View.GONE
+        scroll.addView(remote, FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP))
+        castBar = scroll
         root.addView(castBar, FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH))
 
         setContentView(root)
@@ -147,6 +166,7 @@ class PlayerActivity : BaseActivity() {
 
     override fun onStop() {
         super.onStop()
+        unwatchRemote()
         unregisterCastListener()
         handler.removeCallbacks(hideOverlay)
         view.player = null
@@ -260,11 +280,113 @@ class PlayerActivity : BaseActivity() {
         casting = true
         castBar.visibility = View.VISIBLE
         castText.text = "Transmitindo para " + Cast.deviceName(this) + "\n" + item.title
+        castGuide.text = item.entry?.let { Guide.nowNextLine(Guide.cached(it.id)) } ?: ""
+        item.entry?.let { e ->
+            lifecycleScope.launch {
+                if (withContext(Dispatchers.IO) { Guide.load(listOf(e)) } && casting && currentItem() === item) castGuide.text = Guide.nowNextLine(Guide.cached(e.id))
+            }
+        }
         if (!Cast.isLoaded(this, item, live)) {
             if (!Cast.load(this, item, live, pos)) {
                 backToDevice()
                 Toast.makeText(this, "Não foi possível transmitir. Tente de novo.", Toast.LENGTH_LONG).show()
+                return
             }
+        }
+        watchRemote()
+    }
+
+    /** Se a TV não conseguir abrir o canal, avisa na tela do controle (em vez de ficar parado sem explicar). */
+    private fun watchRemote() {
+        unwatchRemote()
+        val rc = Cast.remote(this) ?: return
+        val cb = object : com.google.android.gms.cast.framework.media.RemoteMediaClient.Callback() {
+            override fun onStatusUpdated() {
+                val st = rc.mediaStatus ?: return
+                if (st.playerState == com.google.android.gms.cast.MediaStatus.PLAYER_STATE_IDLE &&
+                    st.idleReason == com.google.android.gms.cast.MediaStatus.IDLE_REASON_ERROR
+                ) {
+                    castGuide.text = "A TV não conseguiu abrir este canal. Tente outro canal ou toque em Parar transmissão."
+                }
+            }
+        }
+        rc.registerCallback(cb)
+        castCallback = cb
+    }
+
+    private fun unwatchRemote() {
+        val cb = castCallback ?: return
+        try { Cast.remote(this)?.unregisterCallback(cb) } catch (e: Exception) { /* sem importância */ }
+        castCallback = null
+    }
+
+    private fun rbtn(text: String, onClick: () -> Unit): TextView {
+        val b = Ui.ghostButton(this, text, onClick)
+        b.textSize = 14f
+        b.setPadding(Ui.dp(this, 14), Ui.dp(this, 9), Ui.dp(this, 14), Ui.dp(this, 9))
+        return b
+    }
+
+    private fun remoteRow(items: List<View>): LinearLayout {
+        val r = LinearLayout(this)
+        r.orientation = LinearLayout.HORIZONTAL
+        r.gravity = Gravity.CENTER
+        for (v in items) {
+            val lp = LinearLayout.LayoutParams(Ui.WRAP, Ui.WRAP)
+            lp.setMargins(Ui.dp(this, 4), Ui.dp(this, 3), Ui.dp(this, 4), Ui.dp(this, 3))
+            r.addView(v, lp)
+        }
+        return r
+    }
+
+    private fun seekRemote(deltaMs: Long) {
+        val rc = Cast.remote(this) ?: return
+        val to = (rc.approximateStreamPosition + deltaMs).coerceAtLeast(0L)
+        rc.seek(com.google.android.gms.cast.MediaSeekOptions.Builder().setPosition(to).build())
+    }
+
+    /** Volume da TV (0 a 100%). Também funciona com as teclas de volume do aparelho enquanto transmite. */
+    private fun volume(delta: Double) {
+        val s = Cast.session(this) ?: return
+        try {
+            val v = (s.volume + delta).coerceIn(0.0, 1.0)
+            s.volume = v
+            showTitle("Volume da TV: " + Math.round(v * 100) + "%")
+        } catch (e: Exception) { /* a TV não aceitou agora */ }
+    }
+
+    private fun toggleMute() {
+        val s = Cast.session(this) ?: return
+        try {
+            s.isMute = !s.isMute
+            showTitle(if (s.isMute) "TV sem som" else "Som da TV ligado")
+        } catch (e: Exception) { /* a TV não aceitou agora */ }
+    }
+
+    /** Lista de canais (ou de episódios) para pular direto para um. */
+    private fun showChannelList() {
+        val titles = PlayQueue.items.mapIndexed { i, it -> (i + 1).toString() + "   " + it.title }.toTypedArray()
+        val d = AlertDialog.Builder(this)
+            .setTitle(if (PlayQueue.live) "Canais" else "Episódios")
+            .setSingleChoiceItems(titles, PlayQueue.index) { dlg, which ->
+                dlg.dismiss()
+                PlayQueue.index = which
+                play(false)
+            }
+            .setNegativeButton("Fechar", null)
+            .create()
+        d.show()
+        d.listView?.setSelection(maxOf(0, PlayQueue.index - 3))
+    }
+
+    private val applyNumber = Runnable {
+        val n = numBuf.toIntOrNull()
+        numBuf = ""
+        if (n != null && n >= 1 && n <= PlayQueue.items.size) {
+            PlayQueue.index = n - 1
+            play(false)
+        } else {
+            showTitle("Canal inexistente")
         }
     }
 
@@ -272,6 +394,7 @@ class PlayerActivity : BaseActivity() {
     private fun backToDevice() {
         if (!casting) return
         casting = false
+        unwatchRemote()
         castBar.visibility = View.GONE
         if (!isFinishing && player != null) play(false)
     }
@@ -312,6 +435,17 @@ class PlayerActivity : BaseActivity() {
     }
 
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        if (casting && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
+            volume(if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) 0.05 else -0.05)
+            return true
+        }
+        if (PlayQueue.live && keyCode >= KeyEvent.KEYCODE_0 && keyCode <= KeyEvent.KEYCODE_9) {
+            numBuf = (numBuf + (keyCode - KeyEvent.KEYCODE_0)).takeLast(4)
+            showTitle("Canal " + numBuf)
+            handler.removeCallbacks(applyNumber)
+            handler.postDelayed(applyNumber, 1600)
+            return true
+        }
         if (message.visibility == View.VISIBLE && (keyCode == KeyEvent.KEYCODE_DPAD_CENTER || keyCode == KeyEvent.KEYCODE_ENTER)) {
             play(false)
             return true
