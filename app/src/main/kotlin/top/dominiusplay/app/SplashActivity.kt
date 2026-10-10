@@ -21,7 +21,7 @@ class SplashActivity : BaseActivity() {
         val col = LinearLayout(this)
         col.orientation = LinearLayout.VERTICAL
         col.gravity = Gravity.CENTER
-        col.addView(Ui.logo(this, 34f))
+        col.addView(Ui.logoView(this, 150))
         val bar = ProgressBar(this)
         col.addView(bar, Ui.vlp(this, 24, 0, Ui.WRAP, Ui.WRAP))
         root.addView(col, FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH))

@@ -108,7 +108,7 @@ class HomeActivity : BaseActivity() {
         val row = LinearLayout(this)
         row.orientation = LinearLayout.HORIZONTAL
         row.gravity = Gravity.CENTER_VERTICAL
-        row.addView(Ui.logo(this, 24f), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
+        row.addView(Ui.logoView(this, 40, false), LinearLayout.LayoutParams(0, Ui.WRAP, 1f))
         val st = Ui.text(this, statusText(s), 13f, Ui.YELLOW, true)
         st.setPadding(0, 0, Ui.dp(this, 12), 0)
         row.addView(st)

@@ -8,6 +8,7 @@ import android.view.KeyEvent
 import android.view.View
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Toast
 import android.widget.TextView
@@ -61,6 +62,14 @@ class PlayerActivity : BaseActivity() {
         view.useController = !PlayQueue.live
         view.setShowBuffering(PlayerView.SHOW_BUFFERING_ALWAYS)
         root.addView(view, FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH))
+        // logo pequena no canto inferior direito (nos filmes sobe um pouco para não ficar sobre a barra de controle)
+        val wm = ImageView(this)
+        wm.setImageResource(R.drawable.logo_wm)
+        wm.adjustViewBounds = true
+        wm.alpha = 0.85f
+        val wlp = FrameLayout.LayoutParams(Ui.WRAP, Ui.dp(this, 38), Gravity.BOTTOM or Gravity.END)
+        wlp.setMargins(0, 0, Ui.dp(this, 18), Ui.dp(this, if (PlayQueue.live) 16 else 84))
+        root.addView(wm, wlp)
         if (PlayQueue.live) {
             // celular: toque mostra o canal e o guia; toque longo abre a programação do dia
             view.setOnClickListener { showTitle(titleWithGuide(currentItem())) }

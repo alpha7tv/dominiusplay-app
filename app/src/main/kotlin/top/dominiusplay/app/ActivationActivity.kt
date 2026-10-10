@@ -45,7 +45,7 @@ class ActivationActivity : BaseActivity() {
         val pad = Ui.dp(this, 24)
         col.setPadding(pad, Ui.dp(this, 40), pad, pad)
 
-        col.addView(Ui.logo(this, 34f))
+        col.addView(Ui.logoView(this, 120))
         titleView = Ui.text(this, "Entre com o seu acesso", 22f, Ui.TEXT, true)
         col.addView(titleView, Ui.vlp(this, 28, 6))
         sub = Ui.text(this, "Digite o usuário e a senha que você recebeu no e-mail do teste ou com o seu fornecedor.", 14f, Ui.MUTED)

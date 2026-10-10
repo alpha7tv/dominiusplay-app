@@ -9,7 +9,9 @@ import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.ForegroundColorSpan
 import android.view.Gravity
+import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 
@@ -116,6 +118,24 @@ object Ui {
         t.typeface = Typeface.DEFAULT_BOLD
         t.letterSpacing = 0.08f
         return t
+    }
+
+    /** Logo Dominius Play (imagem). Na edição Express aparece "P2P EXPRESS" logo abaixo. */
+    fun logoView(ctx: Context, heightDp: Int, centered: Boolean = true): View {
+        val box = LinearLayout(ctx)
+        box.orientation = LinearLayout.VERTICAL
+        box.gravity = if (centered) Gravity.CENTER_HORIZONTAL else Gravity.START
+        val img = ImageView(ctx)
+        img.setImageResource(R.drawable.logo_full)
+        img.adjustViewBounds = true
+        img.scaleType = ImageView.ScaleType.FIT_CENTER
+        box.addView(img, LinearLayout.LayoutParams(WRAP, dp(ctx, heightDp)))
+        if (BuildConfig.EXPRESS) {
+            val t = text(ctx, "P2P EXPRESS", if (heightDp >= 100) 15f else 11f, YELLOW, true)
+            t.letterSpacing = 0.2f
+            box.addView(t, vlp(ctx, 2, 0, WRAP, WRAP))
+        }
+        return box
     }
 
     fun vlp(ctx: Context, topDp: Int = 0, bottomDp: Int = 0, w: Int = MATCH, h: Int = WRAP): LinearLayout.LayoutParams {
