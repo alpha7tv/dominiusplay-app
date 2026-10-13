@@ -26,6 +26,17 @@ android {
             buildConfigField("String", "APP_TYPE", "\"iptv\"")
             buildConfigField("boolean", "EXPRESS", "false")
             resValue("string", "app_name", "Dominius Play")
+            buildConfigField("String", "BRAND", "\"DOMINIUS PLAY\"")
+            buildConfigField("String", "C_BG", "\"#070A12\"")
+            buildConfigField("String", "C_CARD", "\"#0F1628\"")
+            buildConfigField("String", "C_CARD2", "\"#151E36\"")
+            buildConfigField("String", "C_BORDER", "\"#1E2842\"")
+            buildConfigField("String", "C_TEXT", "\"#EAEEF7\"")
+            buildConfigField("String", "C_MUTED", "\"#8E98B0\"")
+            buildConfigField("String", "C_ACCENT", "\"#FF7A2F\"")
+            buildConfigField("String", "C_YELLOW", "\"#FFC94D\"")
+            buildConfigField("String", "C_PINK", "\"#FF4D6D\"")
+            buildConfigField("String", "C_ON_ACCENT", "\"#1A0E05\"")
         }
         create("express") {
             dimension = "edicao"
@@ -33,6 +44,36 @@ android {
             buildConfigField("String", "APP_TYPE", "\"express\"")
             buildConfigField("boolean", "EXPRESS", "true")
             resValue("string", "app_name", "Dominius Play P2P EXPRESS")
+            buildConfigField("String", "BRAND", "\"DOMINIUS PLAY\"")
+            buildConfigField("String", "C_BG", "\"#070A12\"")
+            buildConfigField("String", "C_CARD", "\"#0F1628\"")
+            buildConfigField("String", "C_CARD2", "\"#151E36\"")
+            buildConfigField("String", "C_BORDER", "\"#1E2842\"")
+            buildConfigField("String", "C_TEXT", "\"#EAEEF7\"")
+            buildConfigField("String", "C_MUTED", "\"#8E98B0\"")
+            buildConfigField("String", "C_ACCENT", "\"#FF7A2F\"")
+            buildConfigField("String", "C_YELLOW", "\"#FFC94D\"")
+            buildConfigField("String", "C_PINK", "\"#FF4D6D\"")
+            buildConfigField("String", "C_ON_ACCENT", "\"#1A0E05\"")
+        }
+        // Cine Pulse: mesmo aplicativo e mesmo painel (dominiusplay.top), com outro nome, logo e tema preto e vermelho
+        create("cinepulse") {
+            dimension = "edicao"
+            applicationId = "br.com.cinepulse.app"
+            buildConfigField("String", "APP_TYPE", "\"cinepulse\"")
+            buildConfigField("boolean", "EXPRESS", "false")
+            resValue("string", "app_name", "Cine Pulse")
+            buildConfigField("String", "BRAND", "\"CINE PULSE\"")
+            buildConfigField("String", "C_BG", "\"#050505\"")
+            buildConfigField("String", "C_CARD", "\"#101010\"")
+            buildConfigField("String", "C_CARD2", "\"#181818\"")
+            buildConfigField("String", "C_BORDER", "\"#2B2B2B\"")
+            buildConfigField("String", "C_TEXT", "\"#F5F5F5\"")
+            buildConfigField("String", "C_MUTED", "\"#9A9A9A\"")
+            buildConfigField("String", "C_ACCENT", "\"#E50914\"")
+            buildConfigField("String", "C_YELLOW", "\"#FF5A5F\"")
+            buildConfigField("String", "C_PINK", "\"#FF2D55\"")
+            buildConfigField("String", "C_ON_ACCENT", "\"#FFFFFF\"")
         }
     }
 

@@ -77,7 +77,7 @@ class PlayerActivity : BaseActivity() {
         }
 
         overlay = Ui.text(this, "", 18f, android.graphics.Color.WHITE, true)
-        overlay.background = Ui.shape(this, android.graphics.Color.parseColor("#B3070A12"), 12)
+        overlay.background = Ui.shape(this, Ui.BG and 0xFFFFFF or (0xB3 shl 24), 12)
         overlay.setPadding(Ui.dp(this, 16), Ui.dp(this, 10), Ui.dp(this, 16), Ui.dp(this, 10))
         val olp = FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.TOP or Gravity.START)
         olp.setMargins(Ui.dp(this, 24), Ui.dp(this, 24), 0, 0)
@@ -86,7 +86,7 @@ class PlayerActivity : BaseActivity() {
         message = Ui.text(this, "", 16f, android.graphics.Color.WHITE, true)
         message.gravity = Gravity.CENTER
         message.visibility = View.GONE
-        message.background = Ui.shape(this, android.graphics.Color.parseColor("#D9070A12"), 14)
+        message.background = Ui.shape(this, Ui.BG and 0xFFFFFF or (0xD9 shl 24), 14)
         message.setPadding(Ui.dp(this, 20), Ui.dp(this, 14), Ui.dp(this, 20), Ui.dp(this, 14))
         root.addView(message, FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.CENTER))
 
@@ -127,7 +127,7 @@ class PlayerActivity : BaseActivity() {
         remote.addView(remoteRow(extra), Ui.vlp(this, 4, 0, Ui.WRAP, Ui.WRAP))
         val scroll = android.widget.ScrollView(this)
         scroll.isFillViewport = true
-        scroll.setBackgroundColor(android.graphics.Color.parseColor("#F2070A12"))
+        scroll.setBackgroundColor(Ui.BG and 0xFFFFFF or (0xF2 shl 24))
         scroll.visibility = View.GONE
         scroll.addView(remote, FrameLayout.LayoutParams(Ui.MATCH, Ui.WRAP))
         castBar = scroll

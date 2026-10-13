@@ -17,17 +17,17 @@ import android.widget.TextView
 
 /** Visual do Dominius Play: fundo escuro, laranja/amarelo/rosa, cantos arredondados e foco bem visível para controle remoto. */
 object Ui {
-    val BG = Color.parseColor("#070A12")
-    val CARD = Color.parseColor("#0F1628")
-    val CARD2 = Color.parseColor("#151E36")
-    val BORDER = Color.parseColor("#1E2842")
-    val TEXT = Color.parseColor("#EAEEF7")
-    val MUTED = Color.parseColor("#8E98B0")
-    val ORANGE = Color.parseColor("#FF7A2F")
-    val YELLOW = Color.parseColor("#FFC94D")
-    val PINK = Color.parseColor("#FF4D6D")
+    val BG = Color.parseColor(BuildConfig.C_BG)
+    val CARD = Color.parseColor(BuildConfig.C_CARD)
+    val CARD2 = Color.parseColor(BuildConfig.C_CARD2)
+    val BORDER = Color.parseColor(BuildConfig.C_BORDER)
+    val TEXT = Color.parseColor(BuildConfig.C_TEXT)
+    val MUTED = Color.parseColor(BuildConfig.C_MUTED)
+    val ORANGE = Color.parseColor(BuildConfig.C_ACCENT)
+    val YELLOW = Color.parseColor(BuildConfig.C_YELLOW)
+    val PINK = Color.parseColor(BuildConfig.C_PINK)
     val GREEN = Color.parseColor("#25D366")
-    val DARK_TEXT = Color.parseColor("#1A0E05")
+    val DARK_TEXT = Color.parseColor(BuildConfig.C_ON_ACCENT)
 
     const val MATCH = ViewGroup.LayoutParams.MATCH_PARENT
     const val WRAP = ViewGroup.LayoutParams.WRAP_CONTENT
@@ -110,8 +110,8 @@ object Ui {
 
     fun logo(ctx: Context, sizeSp: Float = 26f): TextView {
         val t = TextView(ctx)
-        val s = SpannableString(if (BuildConfig.EXPRESS) "DOMINIUS PLAY P2P EXPRESS" else "DOMINIUS PLAY")
-        s.setSpan(ForegroundColorSpan(ORANGE), 9, s.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
+        val s = SpannableString(BuildConfig.BRAND)
+        s.setSpan(ForegroundColorSpan(ORANGE), minOf(BuildConfig.BRAND.indexOf(' ') + 1, BuildConfig.BRAND.length), BuildConfig.BRAND.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
         t.text = s
         t.setTextColor(Color.WHITE)
         t.textSize = sizeSp

@@ -53,14 +53,15 @@ jobs:
           fi
 
       - name: Compilar
-        run: gradle --no-daemon :app:assembleIptvRelease :app:assembleExpressRelease -PVERSION_CODE=${{ github.run_number }}
+        run: gradle --no-daemon :app:assembleIptvRelease :app:assembleExpressRelease :app:assembleCinepulseRelease -PVERSION_CODE=${{ github.run_number }}
 
       - name: Preparar os APKs
         run: |
           cp app/build/outputs/apk/iptv/release/app-iptv-release.apk dominiusplay.apk
           cp app/build/outputs/apk/express/release/app-express-release.apk dominiusplay-express.apk
-          ls -l dominiusplay.apk dominiusplay-express.apk
-          sha256sum dominiusplay.apk dominiusplay-express.apk
+          cp app/build/outputs/apk/cinepulse/release/app-cinepulse-release.apk cinepulse.apk
+          ls -l dominiusplay.apk dominiusplay-express.apk cinepulse.apk
+          sha256sum dominiusplay.apk dominiusplay-express.apk cinepulse.apk
 
       - uses: actions/upload-artifact@v4
         with:
@@ -68,6 +69,7 @@ jobs:
           path: |
             dominiusplay.apk
             dominiusplay-express.apk
+            cinepulse.apk
 
       - name: Publicar a versão
         uses: softprops/action-gh-release@v2
@@ -80,3 +82,4 @@ jobs:
           files: |
             dominiusplay.apk
             dominiusplay-express.apk
+            cinepulse.apk
