@@ -39,6 +39,10 @@ class PlayerActivity : BaseActivity() {
     private val hideOverlay = Runnable { overlay.visibility = View.GONE }
     private var triedAlt = false
     private var usedFast = false
+    private var drawer: ChannelDrawer? = null
+    private val drawerBack = object : androidx.activity.OnBackPressedCallback(false) {
+        override fun handleOnBackPressed() { drawer?.close() }
+    }
 
     // transmissão para a Smart TV
     private lateinit var castBar: View
@@ -72,7 +76,7 @@ class PlayerActivity : BaseActivity() {
         root.addView(wm, wlp)
         if (PlayQueue.live) {
             // celular: toque mostra o canal e o guia; toque longo abre a programação do dia
-            view.setOnClickListener { showTitle(titleWithGuide(currentItem())) }
+            view.setOnClickListener { drawer?.open() }
             view.setOnLongClickListener { showGuide(); true }
         }
 
@@ -89,6 +93,17 @@ class PlayerActivity : BaseActivity() {
         message.background = Ui.shape(this, Ui.BG and 0xFFFFFF or (0xD9 shl 24), 14)
         message.setPadding(Ui.dp(this, 20), Ui.dp(this, 14), Ui.dp(this, 20), Ui.dp(this, 14))
         root.addView(message, FrameLayout.LayoutParams(Ui.WRAP, Ui.WRAP, Gravity.CENTER))
+
+        // menu lateral de canais (OK no controle ou toque): o vídeo segue tocando por trás
+        if (PlayQueue.live) {
+            val d = ChannelDrawer(this, { play(false) }) { open ->
+                drawerBack.isEnabled = open
+                if (open) { overlay.visibility = View.GONE; handler.removeCallbacks(hideOverlay) }
+            }
+            drawer = d
+            root.addView(d.host, FrameLayout.LayoutParams(Ui.MATCH, Ui.MATCH))
+            onBackPressedDispatcher.addCallback(this, drawerBack)
+        }
 
         // ícone de transmissão (aparece só em aparelhos com Google Play Services)
         Cast.button(this)?.let { b ->
@@ -177,6 +192,7 @@ class PlayerActivity : BaseActivity() {
         super.onStop()
         unwatchRemote()
         unregisterCastListener()
+        drawer?.close(true)
         handler.removeCallbacks(hideOverlay)
         view.player = null
         player?.release()
@@ -201,13 +217,15 @@ class PlayerActivity : BaseActivity() {
         player?.prepare()
         player?.playWhenReady = true
         if (PlayQueue.live) prefetchNeighbors()
-        showTitle(titleWithGuide(item))
+        if (drawer?.isOpen != true) showTitle(titleWithGuide(item))
+        drawer?.refreshNow()
         val entry = item.entry
         if (PlayQueue.live && entry != null) {
             val index = PlayQueue.index
             lifecycleScope.launch {
                 val changed = withContext(Dispatchers.IO) { Guide.load(listOf(entry)) }
                 if (changed && index == PlayQueue.index && overlay.visibility == View.VISIBLE) overlay.text = titleWithGuide(item)
+                if (changed && index == PlayQueue.index) drawer?.refreshNow()
             }
         }
     }
@@ -443,7 +461,14 @@ class PlayerActivity : BaseActivity() {
         play(false)
     }
 
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        if (event.action == KeyEvent.ACTION_DOWN) drawer?.let { if (it.isOpen) it.touch() }
+        return super.dispatchKeyEvent(event)
+    }
+
     override fun onKeyDown(keyCode: Int, event: KeyEvent?): Boolean {
+        // menu lateral aberto: as setas navegam nele (foco), OK escolhe o canal e VOLTAR fecha
+        if (drawer?.isOpen == true && keyCode != KeyEvent.KEYCODE_BACK) return super.onKeyDown(keyCode, event)
         if (casting && (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN)) {
             volume(if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) 0.05 else -0.05)
             return true
@@ -470,7 +495,7 @@ class PlayerActivity : BaseActivity() {
                     return true
                 }
                 KeyEvent.KEYCODE_DPAD_CENTER, KeyEvent.KEYCODE_ENTER -> {
-                    showTitle(titleWithGuide(currentItem()))
+                    drawer?.open()
                     return true
                 }
                 KeyEvent.KEYCODE_INFO, KeyEvent.KEYCODE_GUIDE, KeyEvent.KEYCODE_DPAD_RIGHT, KeyEvent.KEYCODE_MENU -> {

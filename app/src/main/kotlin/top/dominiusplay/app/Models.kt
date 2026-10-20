@@ -153,4 +153,20 @@ object PlayQueue {
     var items: List<PlayItem> = emptyList()
     var index: Int = 0
     var live: Boolean = false
+    /** Categoria da lista de canais que está tocando (o menu lateral do player usa para destacar e trocar de categoria). */
+    var categoryId: String = ""
+    var categoryName: String = ""
+
+    /** Monta a fila de canais ao vivo a partir de uma lista de uma categoria. */
+    fun setLive(xt: Xtream, list: List<Entry>, start: Int, catId: String, catName: String) {
+        // Express abre pelo fluxo direto (.ts), que começa bem antes; o HLS fica como reserva
+        items = list.map {
+            if (BuildConfig.EXPRESS) PlayItem(it.title, xt.liveTsUrl(it.id), xt.liveUrl(it.id), it)
+            else PlayItem(it.title, xt.liveUrl(it.id), xt.liveTsUrl(it.id), it)
+        }
+        index = if (start in list.indices) start else 0
+        live = true
+        categoryId = catId
+        categoryName = catName
+    }
 }

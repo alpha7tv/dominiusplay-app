@@ -202,14 +202,7 @@ class BrowseActivity : BaseActivity() {
     private fun open(e: Entry, index: Int) {
         when (mode) {
             "live" -> {
-                val list = entryAdapter.items
-                // Express abre pelo fluxo direto (.ts), que começa bem antes; o HLS fica como reserva
-                PlayQueue.items = list.map {
-                    if (BuildConfig.EXPRESS) PlayItem(it.title, xt.liveTsUrl(it.id), xt.liveUrl(it.id), it)
-                    else PlayItem(it.title, xt.liveUrl(it.id), xt.liveTsUrl(it.id), it)
-                }
-                PlayQueue.index = if (index in list.indices) index else 0
-                PlayQueue.live = true
+                PlayQueue.setLive(xt, entryAdapter.items, index, selectedCat?.id ?: "", selectedCat?.name ?: "")
                 startActivity(Intent(this, PlayerActivity::class.java))
             }
             "movies" -> {
