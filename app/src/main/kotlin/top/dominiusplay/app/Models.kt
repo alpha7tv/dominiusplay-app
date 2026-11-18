@@ -73,7 +73,6 @@ object Session {
     fun clear() {
         Prefs.clearSession()
         current = null
-        Resolver.clear()
         Xtream.clearCache()
     }
 

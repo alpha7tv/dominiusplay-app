@@ -19,11 +19,8 @@ import androidx.media3.common.MediaItem
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.datasource.okhttp.OkHttpDataSource
-import androidx.media3.exoplayer.DefaultLoadControl
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.extractor.DefaultExtractorsFactory
-import androidx.media3.extractor.ts.DefaultTsPayloadReaderFactory
 import androidx.media3.ui.PlayerView
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -38,7 +35,6 @@ class PlayerActivity : BaseActivity() {
     private val handler = Handler(Looper.getMainLooper())
     private val hideOverlay = Runnable { overlay.visibility = View.GONE }
     private var triedAlt = false
-    private var usedFast = false
     private var drawer: ChannelDrawer? = null
     private val drawerBack = object : androidx.activity.OnBackPressedCallback(false) {
         override fun handleOnBackPressed() { drawer?.close() }
@@ -155,23 +151,9 @@ class PlayerActivity : BaseActivity() {
         super.onStart()
         if (PlayQueue.items.isEmpty()) return
         val data = OkHttpDataSource.Factory(DominiusApp.http).setUserAgent(DominiusApp.USER_AGENT)
-        val builder = ExoPlayer.Builder(this)
-        if (BuildConfig.EXPRESS) {
-            // Express: começa a tocar com meio segundo de vídeo, procura menos no começo do fluxo e aceita o primeiro quadro-chave
-            val extractors = DefaultExtractorsFactory()
-                .setTsExtractorFlags(DefaultTsPayloadReaderFactory.FLAG_ALLOW_NON_IDR_KEYFRAMES)
-                .setTsExtractorTimestampSearchBytes(188 * 150)
-            builder.setMediaSourceFactory(DefaultMediaSourceFactory(data, extractors))
-            builder.setLoadControl(
-                DefaultLoadControl.Builder()
-                    .setBufferDurationsMs(2500, 20_000, 500, 1000)
-                    .setPrioritizeTimeOverSizeThresholds(true)
-                    .build()
-            )
-        } else {
-            builder.setMediaSourceFactory(DefaultMediaSourceFactory(data))
-        }
-        val p = builder.build()
+        val p = ExoPlayer.Builder(this)
+            .setMediaSourceFactory(DefaultMediaSourceFactory(data))
+            .build()
         p.addListener(object : Player.Listener {
             override fun onPlayerError(error: PlaybackException) {
                 onError()
@@ -201,7 +183,7 @@ class PlayerActivity : BaseActivity() {
 
     private fun currentItem(): PlayItem = PlayQueue.items[PlayQueue.index]
 
-    private fun play(useAlt: Boolean, raw: Boolean = false) {
+    private fun play(useAlt: Boolean) {
         val item = currentItem()
         if (Cast.session(this) != null) {  // há uma TV conectada: o vídeo vai para ela, não para esta tela
             castCurrent()
@@ -209,14 +191,10 @@ class PlayerActivity : BaseActivity() {
         }
         val url = if (useAlt && item.altUrl != null) item.altUrl else item.url
         triedAlt = useAlt
-        // Express: usa o endereço final descoberto antes do clique (se houver); se falhar, onError() refaz pelo caminho normal
-        val fast = if (!raw && PlayQueue.live) Resolver.take(url) else null
-        usedFast = fast != null
         message.visibility = View.GONE
-        player?.setMediaItem(MediaItem.fromUri(fast ?: url))
+        player?.setMediaItem(MediaItem.fromUri(url))
         player?.prepare()
         player?.playWhenReady = true
-        if (PlayQueue.live) prefetchNeighbors()
         if (drawer?.isOpen != true) showTitle(titleWithGuide(item))
         drawer?.refreshNow()
         val entry = item.entry
@@ -426,24 +404,8 @@ class PlayerActivity : BaseActivity() {
         if (!isFinishing && player != null) play(false)
     }
 
-    /** Deixa pronto o endereço dos canais de cima e de baixo, para a troca de canal ser mais rápida. */
-    private fun prefetchNeighbors() {
-        val size = PlayQueue.items.size
-        if (size < 2) return
-        val i = PlayQueue.index
-        for (d in intArrayOf(1, -1)) {
-            val it = PlayQueue.items[((i + d) % size + size) % size]
-            Resolver.prefetch(if (triedAlt && it.altUrl != null) it.altUrl else it.url)
-        }
-    }
-
     private fun onError() {
         val item = currentItem()
-        if (usedFast) { // o endereço antecipado não funcionou: tenta o normal antes de desistir
-            usedFast = false
-            play(triedAlt, raw = true)
-            return
-        }
         if (!triedAlt && item.altUrl != null) {
             play(true)
             return

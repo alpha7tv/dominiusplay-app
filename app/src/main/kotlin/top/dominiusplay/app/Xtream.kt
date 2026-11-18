@@ -5,7 +5,6 @@ import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
 import java.io.IOException
-import java.security.MessageDigest
 import java.net.URLEncoder
 
 /** Cliente da API Xtream (player_api.php) do servidor da lista do cliente. */
@@ -25,42 +24,8 @@ class Xtream(server: String, private val user: String, private val pass: String)
         }
     }
 
-    /**
-     * Express: listas e categorias ficam guardadas no aparelho. A tela abre na hora com o que está guardado; se o que está
-     * guardado tem mais de 10 minutos, o app atualiza em segundo plano para a próxima vez.
-     */
-    private fun cachedFetch(url: String): String {
-        val dir = DominiusApp.app.cacheDir
-        val f = File(dir, CACHE_PREFIX + md5(url) + ".json")
-        if (f.exists()) {
-            val age = System.currentTimeMillis() - f.lastModified()
-            if (age < 24 * 3_600_000L) {
-                val text = f.readText()
-                if (text.isNotEmpty()) {
-                    if (age > 10 * 60_000L) {
-                        Thread {
-                            try {
-                                val fresh = fetch(url)
-                                if (fresh.trim().startsWith("[")) f.writeText(fresh)
-                            } catch (e: Exception) {
-                                // continua com o que está guardado
-                            }
-                        }.start()
-                    }
-                    return text
-                }
-            }
-        }
-        val fresh = fetch(url)
-        if (fresh.trim().startsWith("[")) f.writeText(fresh)
-        return fresh
-    }
-
-    private fun md5(s: String): String =
-        MessageDigest.getInstance("MD5").digest(s.toByteArray()).joinToString("") { "%02x".format(it) }
-
     private fun array(url: String): JSONArray {
-        val t = (if (BuildConfig.EXPRESS) cachedFetch(url) else fetch(url)).trim()
+        val t = fetch(url).trim()
         return if (t.startsWith("[")) JSONArray(t) else JSONArray()
     }
 
@@ -172,7 +137,7 @@ class Xtream(server: String, private val user: String, private val pass: String)
     companion object {
         private const val CACHE_PREFIX = "cat-"
 
-        /** Apaga as listas guardadas (ao sair da conta). */
+        /** Apaga listas guardadas por versões antigas do app (ao sair da conta). */
         fun clearCache() {
             try {
                 DominiusApp.app.cacheDir.listFiles()?.forEach { if (it.name.startsWith(CACHE_PREFIX)) it.delete() }
